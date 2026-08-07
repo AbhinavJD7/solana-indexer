@@ -1,0 +1,20 @@
+[package]
+name = "solana-indexer"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+# The asynchronous Rust runtime (crucial for handling heavy data streams)
+tokio = { version = "1.40", features = ["full"] }
+
+# The official Triton Yellowstone gRPC client
+yellowstone-grpc-client = "13.3.0"
+yellowstone-grpc-proto = "12.5.0"
+
+# Async stream handling
+futures = "0.3.24"
+
+# Logging so we can see the raw blockchain data coming in
+tracing = "0.1"
+tracing-subscriber = "0.3"
+tonic = { version = "0.14.6", features = ["tls-ring", "tls-webpki-roots"] }
