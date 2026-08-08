@@ -38,7 +38,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
         vote:Some(false), //Validator vote transaction not needed
         failed:Some(false), //we need only the successful transactions
         signature:None,
-        account_include: vec!["CmcT8bch4VwsxHqWEvKGzGtCZdKCeYSZVxhjw5quGjzn".to_string()],
+        account_include: vec!["TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA".to_string()], //TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA | CmcT8bch4VwsxHqWEvKGzGtCZdKCeYSZVxhjw5quGjzn
         account_exclude:vec![],
         account_required:vec![],
         token_accounts:None,
@@ -81,9 +81,39 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
                                 let raw_signature = tx_info.signature;
                                 let readable_signature = bs58::encode(raw_signature).into_string();
                                 println!(
-                                    "Caught a Transaction from your wallet!\nSlot: {}\nSignature: https://solscan.io/tx/{}?cluster=devnet\n", 
+                                    "Caught a Transaction in SPL Token! \nSlot: {}\nSignature: https://solscan.io/tx/{}?cluster=devnet\n", 
                                     tx.slot, 
-                                    readable_signature);                            }
+                                    readable_signature);       
+                                if let Some(transaction) = tx_info.transaction{
+                                    if let Some(message) = transaction.message{
+                                            println!("--- TRANSACTION DETAILS ---");
+                                            println!("Number of Instructions: {}", message.instructions.len());
+                                            println!("Accounts involved (first 3):");
+                                            if let Some(meta) = &tx_info.meta{
+                                                println!("\n SOL Balance Changes:");
+                                                //We loop through the first 3 accounts again
+                                                for i in 0..std::cmp::min(3, message.account_keys.len()) {
+                                                    let pre_lamports = meta.pre_balances[i];
+                                                    let post_lamports = meta.post_balances[i];
+                                                    
+                                                    // Calculate the difference (cast to i64 to handle negative numbers)
+                                                    let change_lamports = (post_lamports as i64) - (pre_lamports as i64);
+                                                    
+                                                    // Convert Lamports to SOL
+                                                    let change_sol = change_lamports as f64 / 1_000_000_000.0;
+                                                    
+                                                    let readable_pubkey = bs58::encode(&message.account_keys[i]).into_string();
+                                                    
+                                                    println!("  Wallet: {}", readable_pubkey);
+                                                    println!("  Change: {} SOL", change_sol);
+                                                    println!("  ---");
+                                                }
+
+                                            }
+
+                                    }
+                                }
+                                                     }
                         },
                         UpdateOneof::Ping(_) => {
                             // Helius sends a ping every few seconds to keep the connection open
