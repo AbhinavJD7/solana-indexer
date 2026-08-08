@@ -2,9 +2,9 @@ use tonic::transport::ClientTlsConfig;
 use futures::{SinkExt, stream::StreamExt}; //this allow .next() on our incoming data stream
 use yellowstone_grpc_client::GeyserGrpcClient; //it is struct that handle server connection
 use yellowstone_grpc_proto::{prelude::{
-    SubscribeRequest, SubscribeRequestFilterBlocks, subscribe_update::UpdateOneof,
+    SubscribeRequest, SubscribeRequestFilterBlocks, subscribe_update::UpdateOneof,SubscribeRequestFilterTransactions,
 }, tonic::Request};
-use std::collections::HashMap;// Geyser protocol requires us to name our subscriptions using key-value pairs.
+use std::{collections::HashMap, hash::Hash};// Geyser protocol requires us to name our subscriptions using key-value pairs.
 
 #[tokio::main] //async runtime of rust, this turns main into async main
 async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to throw back the error
@@ -12,7 +12,7 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
 
     let endpoint = "https://laserstream-devnet-ewr.helius-rpc.com".to_string();
     // For gRPC, we MUST pass the API key in the x-token header, not the URL!
-    let x_token = Some("ab77d0f0-033d-4753-87a3-ffedebec057a".to_string()); 
+    let x_token = Some("ab77d0f0-033d-4753-87a3-ffedebec057a".to_string());  //x_token has my api key
     println!("Connecting to Helius Geyser gRPC...");
     //Geyser client
     let mut client = GeyserGrpcClient::build_from_shared(endpoint)?
@@ -22,22 +22,34 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
         .await?;
     println!("Successfully connected to Helius!");
 
-    //A filter for "Blocks"
-    let mut blocks = HashMap::new();
-    blocks.insert("abc_subs".to_string(), SubscribeRequestFilterBlocks{
-        account_include:vec![],
-        include_transactions:Some(false),
-        include_accounts:Some(false),
-        include_entries:Some(false),
-        cuckoo_account_include: None,
-    });
+    // //A filter for "Blocks" (Day 1)
+    // let mut blocks = HashMap::new();
+    // blocks.insert("abc_subs".to_string(), SubscribeRequestFilterBlocks{
+    //     account_include:vec![],
+    //     include_transactions:Some(false),
+    //     include_accounts:Some(false),
+    //     include_entries:Some(false),
+    //     cuckoo_account_include: None,
+    // });
+
+    //A filter for Transactions (Day 2 onwards)
+    let mut transactions = HashMap::new();
+    transactions.insert("whirlpool_txs".to_string(), SubscribeRequestFilterTransactions{
+        vote:Some(false), //Validator vote transaction not needed
+        failed:Some(false), //we need only the successful transactions
+        signature:None,
+        account_include: vec!["CmcT8bch4VwsxHqWEvKGzGtCZdKCeYSZVxhjw5quGjzn".to_string()],
+        account_exclude:vec![],
+        account_required:vec![],
+        token_accounts:None,
+    },);
 
     //Pack the filter into the main Geyser SubscribeRequest object
     let request = SubscribeRequest{
-        blocks,
+        blocks:HashMap::new(), //emptied this out because we only want transactions now
         accounts: HashMap::new(),
         accounts_data_slice: vec![],
-        transactions: HashMap::new(),
+        transactions,
         transactions_status: HashMap::new(),
         slots: HashMap::new(),
         entry: HashMap::new(),
@@ -45,7 +57,6 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
 
         // 1 = Confirmed (safe from minor forks). 2 = Finalized (100% safe, but slower). 
         // 0 = Processed (fastest, but blocks might get rolled back).
-
         commitment: Some(1), 
         from_slot:None,
         ping: None,
@@ -65,9 +76,14 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
                 // Look inside the message to see what Helius sent us
                 if let Some(update) = msg.update_oneof {
                     match update {
-                        UpdateOneof::Block(block) => {
-                            // We caught a block!
-                            println!("Received new block at slot: {}", block.slot);
+                        UpdateOneof::Transaction(tx) => {
+                            if let Some(tx_info) = tx.transaction{
+                                let raw_signature = tx_info.signature;
+                                let readable_signature = bs58::encode(raw_signature).into_string();
+                                println!(
+                                    "Caught a Transaction from your wallet!\nSlot: {}\nSignature: https://solscan.io/tx/{}?cluster=devnet\n", 
+                                    tx.slot, 
+                                    readable_signature);                            }
                         },
                         UpdateOneof::Ping(_) => {
                             // Helius sends a ping every few seconds to keep the connection open
