@@ -29,3 +29,20 @@
 
 **Status:**
 Successfully tracked personal Devnet wallet activity and extracted deep financial metadata from the SPL Token Program! 🚀
+
+---
+
+## Day 3: Cloud Database Integration & Data Pipelining
+
+**Core Concepts Learned:**
+- **Asynchronous Data Pipelines:** When streaming high-speed blockchain data, any blocking operation (like writing to a database) can cause the gRPC stream to lag or drop data. Learned to push database inserts into background threads using `tokio::spawn` to keep the ingestion loop running at max speed.
+- **Connection Poolers:** Explored how cloud databases like Supabase use PgBouncer to manage high-volume connection requests. Discovered the critical difference between **Transaction Mode** (which does not support prepared statements easily) and **Session Mode** (which perfectly maps to typical backend connections).
+
+**Technical Implementation:**
+- **sqlx Configuration:** Configured `sqlx::PgPoolOptions` to create a robust connection pool to the Supabase Postgres instance. Overcame compile-time macro issues by correctly utilizing the Session Mode pooler port (`5432`).
+- **Automated Schema Generation:** Leveraged `sqlx::query` to execute a `CREATE TABLE IF NOT EXISTS` statement during startup to programmatically prepare the data structures (`transactions`).
+- **Data Pruning:** Implemented logic to only save accounts that actually experienced a `change_sol != 0.0`. This aggressively prunes noise (like read-only data accounts or untouched programs) before insertion, saving massive amounts of database storage.
+- **Background Inserts:** Constructed vectors for `accounts_involved` and `balance_changes`, cloned the DB connection pool, and used `sqlx::query` chained with `.bind()` inside a `tokio::spawn(async move { ... })` task to gracefully insert the structured blockchain data entirely in the background.
+
+**Status:**
+Successfully deployed a fully autonomous Web3 data pipeline pushing real-time Solana transactions straight to a cloud database! 🚀
