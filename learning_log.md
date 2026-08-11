@@ -46,3 +46,21 @@ Successfully tracked personal Devnet wallet activity and extracted deep financia
 
 **Status:**
 Successfully deployed a fully autonomous Web3 data pipeline pushing real-time Solana transactions straight to a cloud database! 🚀
+
+---
+
+## Day 4: Advanced Architecture & The MEV Sensing Engine
+
+**Core Concepts Learned:**
+- **Modular Rust Architecture:** Learned how to break a monolithic `main.rs` file into independent modules (`database.rs`, `grpc.rs`, `processor.rs`). Discovered that making a function `pub` is required to share logic across the workspace, creating a clean, production-grade orchestrator in `main.rs`.
+- **gRPC vs WebSockets:** Deep dived into the latency differences between RPC-based WebSockets and direct-validator Geyser gRPC streams. Understood why MEV bots and high-frequency trading firms exclusively use Geyser for zero-latency data interception.
+- **RPC Credit Optimization:** Realized that subscribing to massive programs (like the entire SPL Token program) drains Helius credits rapidly. Learned how to find "Alpha" filter accounts (like the Raydium Create Pool Fee account: `7Ytt...`) to filter out 99.9% of network noise and only stream highly specific events.
+
+**Technical Implementation:**
+- **Refactoring:** Successfully split the codebase into logical domains, separating database connection logic, gRPC subscription filters, and transaction parsing into dedicated files.
+- **Log Parsing:** Wrote a processor engine that iterates over `meta.log_messages` in real-time, scanning raw contract outputs for the exact `initialize2` string emitted by Raydium AMM V4 during a token launch.
+- **Devnet Simulation:** Validated the sniper's sensing engine by executing a microscopic `solana transfer` via the CLI, appending a string memo to trick the indexer into successfully triggering the token launch alarm.
+
+**Status:**
+Successfully transformed a generic blockchain indexer into a highly-specialized, zero-latency MEV Sensing Engine capable of detecting liquidity pools the millisecond they launch! 🎯
+
