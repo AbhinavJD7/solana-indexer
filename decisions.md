@@ -15,3 +15,7 @@
 ### 4. sqlx over ORMs (Prisma/Diesel)
 **Decision:** We use `sqlx` to write raw SQL queries for Supabase.
 **Rationale:** While ORMs are great for standard web apps, high-frequency indexing requires maximum performance. `sqlx` allows us to write highly optimized, async raw SQL (like `ON CONFLICT DO NOTHING`) without the overhead of an ORM.
+
+### 5. Multi-threading with Tokio (`tokio::spawn`)
+**Decision:** We offload database inserts and secondary RPC calls to background threads using `tokio::spawn`.
+**Rationale:** The Helius Geyser stream pushes transactions endlessly. If we block the main ingestion loop (e.g., waiting 500ms for a standard RPC call to verify a Rug Pull), our indexer will instantly fall behind the live blockchain. Spawning background threads allows the main loop to listen at zero-latency while heavy I/O operations happen concurrently.
