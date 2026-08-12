@@ -64,3 +64,21 @@ Successfully deployed a fully autonomous Web3 data pipeline pushing real-time So
 **Status:**
 Successfully transformed a generic blockchain indexer into a highly-specialized, zero-latency MEV Sensing Engine capable of detecting liquidity pools the millisecond they launch! 🎯
 
+---
+
+## Day 5: The Full MEV Pipeline & Analytics
+
+**Core Concepts Learned:**
+- **Asynchronous Concurrency:** Learned how to use `tokio::spawn` to offload heavy RPC network calls to background threads, ensuring the primary gRPC stream never blocks or falls behind the blockchain.
+- **Graceful Error Handling:** Handled the difference between real token launches and simulated launches by writing defensive logic (e.g., defaulting to "Unknown Token" when account keys are missing).
+- **Secondary RPC Verification:** Integrated `solana-client` to reach out to the standard RPC network to inspect Mint Accounts for `mint_authority` status (Rug Pull Check).
+
+**Technical Implementation:**
+- Modified `main.rs` to pass a cloned PostgreSQL connection pool into the Tokio background threads.
+- Built a bash-based `simulator.sh` spam bot to rapidly fire transactions at the Devnet, successfully stress-testing our processing engine.
+- Re-wired the database to a specialized `raydium_pools` table in Supabase, capturing Token Mints, Names, Symbols, and Safety ratings.
+
+**Status:**
+We now have a professional indexer that not only detects pools at zero-latency but actively scans them for Rug Pulls and saves the data to a cloud analytics database!
+
+

@@ -18,24 +18,22 @@ pub async fn setup_database() -> Result<Pool<Postgres>, Box<dyn std::error::Erro
         
     println!("Successfully connected to Supabase!");
 
-    // 3. Ensure the schema exists before we start ingesting data
+    // Create the specialized raydium_pools table!
     sqlx::query(
         r#"
-        CREATE TABLE IF NOT EXISTS transactions (
+        CREATE TABLE IF NOT EXISTS raydium_pools (
             signature VARCHAR(88) PRIMARY KEY,
             slot BIGINT NOT NULL,
-            instruction_count INT NOT NULL,
-            accounts_involved TEXT[] NOT NULL,
-            balance_changes DOUBLE PRECISION[] NOT NULL,
-            created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+            token_mint VARCHAR(88) NOT NULL,
+            token_name VARCHAR(100),
+            token_symbol VARCHAR(20),
+            is_safe BOOLEAN NOT NULL,
+            created_at TIMESTAMPTZ DEFAULT NOW()
         );
         "#
     )
     .execute(&db_pool)
     .await?;
-    
     println!("Database schema is ready!");
-
-    // Return the active connection pool back to main.rs
     Ok(db_pool)
 }

@@ -1,14 +1,8 @@
-use tonic::transport::ClientTlsConfig;
 use futures::{SinkExt, stream::StreamExt}; //this allow .next() on our incoming data stream
-use yellowstone_grpc_client::GeyserGrpcClient; //it is struct that handle server connection
 use yellowstone_grpc_proto::{prelude::{
-    SubscribeRequest, SubscribeRequestFilterBlocks, subscribe_update::UpdateOneof,SubscribeRequestFilterTransactions,
-}, tonic::Request};
-use std::{collections::HashMap, hash::Hash};// Geyser protocol requires us to name our subscriptions using key-value pairs.
-
+    subscribe_update::UpdateOneof
+}};
 use dotenvy::dotenv;
-use sqlx::postgres::PgPoolOptions;
-use std::env;
 pub mod database;
 pub mod grpc;
 pub mod processor;
@@ -40,7 +34,15 @@ async fn main() -> Result<(),Box<dyn std::error::Error>>{  //we can use "?" to t
                     match update {
                         UpdateOneof::Transaction(tx) => {
                             if let Some(tx_info) = tx.transaction {
-                                processor::process_transaction(&tx_info, tx.slot);
+                                // 1. Clone the database pool and the transaction data
+                                let pool = db_pool.clone();
+                                let info = tx_info.clone();
+                                let slot = tx.slot;
+                                // 2. Throw the heavy lifting onto a background thread! (as it will delay our MEV) 
+                                tokio::spawn(async move {
+                                    processor::process_transaction(&info, slot,pool).await; //callint process_transaction in processor.rs
+                                });
+                                
                             }
                         },
                         UpdateOneof::Ping(_) => {
